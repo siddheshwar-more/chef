@@ -26,6 +26,7 @@ class Chef
   class HTTP; end
   class REST < HTTP; end
 end
+require 'uri'
 
 require 'chef/http/authenticator'
 require 'chef/http/decompressor'
@@ -190,7 +191,8 @@ class Chef
 
     def http_client(base_url=nil)
       base_url ||= url
-      BasicClient.new(base_url, :ssl_policy => Chef::HTTP::APISSLPolicy)
+      @http_client ||= {}
+      @http_client[base_url.host] ||= BasicClient.new(base_url, :ssl_policy => Chef::HTTP::APISSLPolicy)
     end
 
     ############################################################################

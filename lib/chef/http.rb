@@ -197,7 +197,8 @@ class Chef
 
     def http_client(base_url=nil)
       base_url ||= url
-      BasicClient.new(base_url)
+      @http_client ||= {}
+      @http_client[base_url.host] ||= BasicClient.new(base_url)
     end
 
     protected

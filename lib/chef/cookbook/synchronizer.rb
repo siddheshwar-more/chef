@@ -138,7 +138,9 @@ class Chef
 
       files.each do |file|
         queue << lambda do |lock|
-          full_file_path = sync_file(file)
+          Thread.current['http_client'] ||= Chef::REST.new(Chef::Config[:chef_server_url])
+
+          full_file_path = sync_file(Thread.current['http_client'], file)
 
           lock.synchronize {
             # Save the full_path of the downloaded file to be restored in the manifest later
@@ -201,7 +203,7 @@ class Chef
     # file<CookbookFile>
     # === Returns
     # Full path to the cached file as a String
-    def sync_file(file)
+    def sync_file(http_client, file)
       cache_filename = File.join("cookbooks", file.cookbook.name, file.manifest_record['path'])
       mark_cached_file_valid(cache_filename)
 
@@ -209,7 +211,7 @@ class Chef
       # (remote, per manifest), do the update. This will also execute if there
       # is no current checksum.
       if !cached_copy_up_to_date?(cache_filename, file.manifest_record['checksum'])
-        download_file(file.manifest_record['url'], cache_filename)
+        download_file(http_client, file.manifest_record['url'], cache_filename)
         @events.updated_cookbook_file(file.cookbook.name, cache_filename)
       else
         Chef::Log.debug("Not storing #{cache_filename}, as the cache is up to date.")
@@ -231,8 +233,8 @@ class Chef
     # Unconditionally download the file from the given URL. File will be
     # downloaded to the path +destination+ which is relative to the Chef file
     # cache root.
-    def download_file(url, destination)
-      raw_file = server_api.get_rest(url, true)
+    def download_file(http_client, url, destination)
+      raw_file = http_client.get_rest(url, true)
 
       Chef::Log.info("Storing updated #{destination} in the cache.")
       cache.move_to(raw_file.path, destination)
@@ -241,10 +243,6 @@ class Chef
     # Marks the given file as valid (non-stale).
     def mark_cached_file_valid(cache_filename)
       CookbookCacheCleaner.instance.mark_file_as_valid(cache_filename)
-    end
-
-    def server_api
-      Chef::REST.new(Chef::Config[:chef_server_url])
     end
 
   end
