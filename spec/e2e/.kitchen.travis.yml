@@ -10,6 +10,7 @@ provisioner:
   github: <%= ENV['TRAVIS_REPO_SLUG'] %>
   branch: <%= ENV['TRAVIS_COMMIT'] %>
   require_chef_omnibus: true
+  data_path: test/fixtures
 
 platforms:
   - name: ubuntu-12.04
@@ -21,7 +22,8 @@ platforms:
       security_group_ids: ["travis-ci"]
 
 suites:
-  - name: default
+  - name: webapp
     run_list:
-      - recipe[git-cookbook::default]
+      - recipe[apt::default]
+      - recipe[webapp::default]
     attributes:
